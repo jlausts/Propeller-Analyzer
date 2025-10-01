@@ -207,14 +207,16 @@ float RPM(uint16_t *const arr)
     static float float_arr[ARR_LEN];
     uint16_t n = ARR_LEN;
     static float previous_rpm;
-    static float avg_rpm = 0;
+    // static float avg_rpm = 0;
     // auto start = micros();
     // print(arr);
     // clip to quantile range
     uint16_t top = quantile(arr, n, QUANTILE);
     uint16_t bottom = quantile(arr, n, 1.0f - QUANTILE);
-    if (top - bottom < 20 || bottom > 1000)
-        return 0;
+
+    return top - bottom;
+    // if (top - bottom < 20 || bottom > 1000)
+    //     return 0;
 
     for (uint16_t i = 0; i < n; i++)
     {
@@ -333,6 +335,9 @@ void setup()
 {
     Serial.begin(115200);
     setupADC();
+    // hx711_begin(); 
+    // hx711_tare();  
+    // float w = hx711_get_weight();
     ITimer.attachInterruptInterval(TIMER_INTERVAL_US, TimerHandler);
 }
 
@@ -345,8 +350,9 @@ void loop()
     //     Serial.println(time);
     // }
     
-    if (arrays_full)
+    if (arrays_full && Serial.available())
     {
+        Serial.read();
         arrays_full = false;
         // Serial.read();
         uint16_t *const light_buf = light[!array_using];
