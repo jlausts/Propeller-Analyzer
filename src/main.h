@@ -1,17 +1,19 @@
 #include "SAMDTimerInterrupt.h"
 #include "wiring_private.h"
-#include "load_cell.h"
 #include <Arduino.h>
 #include <sam.h>
+#include "HX711.h"
+
 
 #define LIGHT_SENSOR A0
 #define SOUND_SENSOR A1
 #define TIMER_INTERVAL_US 25
-#define ARR_LEN 5000
+#define ARR_LEN 16000
 #define EMA 0.92f
 #define DERIVATIVE_JUMP 10
 #define QUANTILE 0.95f 
-#define BLADES 4
+#define BLADES 1
+#define WEIGHT_EMA 0.95f
 constexpr float update_time = ARR_LEN * TIMER_INTERVAL_US / 1e6f;
 
 
@@ -20,9 +22,10 @@ uint16_t sound[2][ARR_LEN];
 bool arrays_full;
 bool array_using;
 uint16_t array_index;
-
+float weight = 0;
 SAMDTimer ITimer(TIMER_TC3);
-
+volatile bool in_isr;
+HX711 scale;
 
 
 uint16_t things[ARR_LEN] = {

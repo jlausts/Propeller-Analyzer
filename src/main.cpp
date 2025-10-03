@@ -1,4 +1,10 @@
 #include "main.h"
+#include "HX711.h"
+
+
+
+
+
 
 
 static inline void setupADC(void)
@@ -72,7 +78,6 @@ static inline uint16_t readADC(const uint8_t pin)
 
     return adc->RESULT.reg;
 }
-
 
 float quantile(const uint16_t *arr, const uint16_t n, const float per, float lr=.03f, const int max_iter=40, const int close_enough=40)
 {
@@ -200,8 +205,6 @@ void print(float *const arr)
 
 // about 20 ms to excecute
 // which is fine becuase it takes 125ms to fill the array anyways.
-// next thing to make it better would be to determine the avg time period between blade countings, and remove any outliers. 
-// then return that average.
 float RPM(uint16_t *const arr)
 {
     static float float_arr[ARR_LEN];
@@ -214,9 +217,9 @@ float RPM(uint16_t *const arr)
     uint16_t top = quantile(arr, n, QUANTILE);
     uint16_t bottom = quantile(arr, n, 1.0f - QUANTILE);
 
-    return top - bottom;
-    // if (top - bottom < 20 || bottom > 1000)
-    //     return 0;
+    // just picking up ambient noise.
+    if (top - bottom < 20 || bottom > 1000)
+        return 0;
 
     for (uint16_t i = 0; i < n; i++)
     {
@@ -288,8 +291,10 @@ float RPM(uint16_t *const arr)
     return 0;
 }
 
-void process_sound(const uint16_t *const arr)
+#define SOUND_EMA 0.9f
+float process_sound(uint16_t *const arr)
 {
+
     // Mean
     uint32_t mean_int = 0;
     for (uint16_t i = 0; i < ARR_LEN; i++)
@@ -306,19 +311,12 @@ void process_sound(const uint16_t *const arr)
     float rms = sqrtf(sumsq / ARR_LEN);
 
     // dB relative to ADC full scale
-    // double ref = 4095.0 * 0.707106781; // 12-bit ADC FS
-    double db = 20.0 * log10(rms / (4095.0 * 0.707106781));
-
-    Serial.print("Sound: ");
-    Serial.print(db);
-    Serial.println(" dBFS");
+    return 20.0f * log10f(rms / 4095.0);
 }
 
 // 7 us-ish
-// float time;
 void TimerHandler()
 {
-    // auto start = micros();
     light[array_using][array_index] = readADC(LIGHT_SENSOR);
     sound[array_using][array_index++] = readADC(SOUND_SENSOR);
 
@@ -328,37 +326,62 @@ void TimerHandler()
         arrays_full = true;
         array_index = 0;
     }
-    // time = 0.99 * time + 0.01 * (float)(micros() - start);
+    in_isr = false;
 }
 
 void setup()
 {
     Serial.begin(115200);
     setupADC();
-    // hx711_begin(); 
-    // hx711_tare();  
-    // float w = hx711_get_weight();
+
+    // while(!Serial.available());
+    // Serial.read();
     ITimer.attachInterruptInterval(TIMER_INTERVAL_US, TimerHandler);
+    scale.begin();
+    scale.tare();
 }
 
 void loop()
 {
-
-    // if (Serial.available())
-    // {
-    //     Serial.read();
-    //     Serial.println(time);
-    // }
-    
-    if (arrays_full && Serial.available())
+    if (arrays_full)// && Serial.available())
     {
         Serial.read();
         arrays_full = false;
         // Serial.read();
         uint16_t *const light_buf = light[!array_using];
-        // const uint16_t *sound_buf = sound[!array_using];
+        uint16_t *sound_buf = sound[!array_using];
         auto rpm = RPM(light_buf);
-        Serial.println(rpm);
-        // process_sound(sound_buf);
+        Serial.print(rpm);
+        Serial.print(" ");
+        Serial.print(process_sound(sound_buf));
+        Serial.print(" ");
+        Serial.println(scale.get_weight(20), 2);
+
+        if (Serial.available())
+        {   
+            if (Serial.read() == 's')
+            {
+                noInterrupts();
+                for (int i = 0; i < ARR_LEN; ++i)
+                {
+                    Serial.println(sound_buf[i]);
+                }
+                interrupts();
+            }
+            scale.tare();
+        }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
