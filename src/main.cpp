@@ -4,9 +4,6 @@
 
 
 
-
-
-
 static inline void setupADC(void)
 {
     Adc *const adc = ADC0;
@@ -332,17 +329,32 @@ void TimerHandler()
 void setup()
 {
     Serial.begin(115200);
-    setupADC();
+    // setupADC();
+    Accel.begin();
 
     // while(!Serial.available());
     // Serial.read();
-    ITimer.attachInterruptInterval(TIMER_INTERVAL_US, TimerHandler);
-    scale.begin();
-    scale.tare();
+    // ITimer.attachInterruptInterval(TIMER_INTERVAL_US, TimerHandler);
+    // scale.begin();
+    // scale.tare();
 }
 
 void loop()
 {
+    const int num_readings = ARR_LEN;
+    uint16_t arr[ARR_LEN];
+    while(1)
+    {
+        auto start = micros();
+        Accel.readZ(num_readings, arr);
+        Serial.println(micros() - start);
+        // for (int i = 0; i < num_readings; ++i)
+        // {
+        //     Serial.println(arr[i]);
+        // }
+    }
+
+
     if (arrays_full)// && Serial.available())
     {
         Serial.read();
@@ -372,7 +384,6 @@ void loop()
         }
     }
 }
-
 
 
 

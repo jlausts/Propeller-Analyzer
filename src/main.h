@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <sam.h>
 #include "HX711.h"
-
+#include "accelerometer.h"
 
 #define LIGHT_SENSOR A0
 #define SOUND_SENSOR A1
@@ -26,6 +26,7 @@ float weight = 0;
 SAMDTimer ITimer(TIMER_TC3);
 volatile bool in_isr;
 HX711 scale;
+Accelerometer Accel;
 
 
 uint16_t things[ARR_LEN] = {
