@@ -7,8 +7,9 @@
 
 #define LIGHT_SENSOR A0
 #define SOUND_SENSOR A1
-#define TIMER_INTERVAL_US 25
-#define ARR_LEN 16000
+#define TIMER_INTERVAL_US 80
+#define ARR_LEN (12500*1)
+#define CHUNK_SIZE 1024 // for Serial.write
 #define EMA 0.92f
 #define DERIVATIVE_JUMP 10
 #define QUANTILE 0.95f 
@@ -17,8 +18,9 @@
 constexpr float update_time = ARR_LEN * TIMER_INTERVAL_US / 1e6f;
 
 
-uint16_t light[2][ARR_LEN];
-uint16_t sound[2][ARR_LEN];
+int16_t light[ARR_LEN];
+int16_t sound[ARR_LEN];
+int16_t vibration[ARR_LEN];
 bool arrays_full;
 bool array_using;
 uint16_t array_index;

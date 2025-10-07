@@ -5,7 +5,7 @@ bool Accelerometer::begin(TwoWire &wirePort, const uint8_t address)
     _wire = &wirePort;
     _addr = address;
     _wire->begin();
-    _wire->setClock(400000);
+    _wire->setClock(1000000);
 
     // Wake up device (clear sleep bit)
     _wire->beginTransmission(_addr);
@@ -80,7 +80,7 @@ uint16_t Accelerometer::readAxis(const uint8_t regHigh, bool fast)
     _wire->write(regHigh);
     _wire->endTransmission(false);
     _wire->requestFrom(_addr, (uint8_t)2, (uint8_t)true);
-    return (_wire->read() << 8) | _wire->read();
+    return ((_wire->read() << 8) | _wire->read()) + (1<<14);
 }
 
 void Accelerometer::readAxis(const uint8_t regHigh, const int num_readings, uint16_t *const arr)

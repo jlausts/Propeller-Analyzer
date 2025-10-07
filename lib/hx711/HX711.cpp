@@ -11,24 +11,15 @@
 #include "HX711.h"
 extern volatile bool in_isr;
 
-HX711::HX711()
-{
-}
+HX711::HX711() {}
 
-HX711::~HX711()
-{
-}
+HX711::~HX711() {}
 
 void HX711::begin()
 {
 	pinMode(PD_SCK, OUTPUT);
 	pinMode(DOUT, INPUT_PULLUP);
-}
-
-void HX711::wait_for_isr()
-{
-	in_isr = true;
-	while(in_isr);
+	tare();
 }
 
 uint32_t HX711::read()
@@ -38,8 +29,6 @@ uint32_t HX711::read()
 	uint8_t i = 0;
 	for (uint8_t k = 0; k < 3; ++k)
 	{
-		wait_for_isr();
-
 		for (uint8_t j = 0; j < 8; ++i, ++j)
 		{
 			digitalWrite(PD_SCK, HIGH);
@@ -51,7 +40,6 @@ uint32_t HX711::read()
 	}
 
 	// Set the channel and the gain factor for the next reading using the clock pin.
-	wait_for_isr();
 	for (unsigned int i = 0; i < GAIN; i++)
 	{
 		digitalWrite(PD_SCK, HIGH);
@@ -79,36 +67,14 @@ long HX711::read_average(byte times)
 	return sum / times;
 }
 
-double HX711::get_value(byte times)
-{
-	return read_average(times) - OFFSET;
-}
-
-float HX711::get_units(byte times)
-{
-	return get_value(times) / SCALE;
-}
-
 float HX711::get_weight(byte times) 
 {
-	const float measured = get_units(times);
-    return -0.000235f * measured * measured + 2.355f * measured;
+	const float measured = (read_average(times) - OFFSET) / SCALE;
+    return (-0.000235f * measured * measured + 2.355f * measured) * (invert ? -1 : 1);
 }
-
 
 void HX711::tare(byte times)
 {
-	double sum = read_average(times);
-	OFFSET = sum;
+	OFFSET = read_average(times);
 }
 
-void HX711::power_down()
-{
-	digitalWrite(PD_SCK, LOW);
-	digitalWrite(PD_SCK, HIGH);
-}
-
-void HX711::power_up()
-{
-	digitalWrite(PD_SCK, LOW);
-}
